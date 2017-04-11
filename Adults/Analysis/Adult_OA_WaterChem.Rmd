@@ -1,6 +1,6 @@
 ---
 title: "Adult OA Experiment Water Chem"
-output: html_notebook
+output: md_document
 ---
 
 This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
@@ -10,11 +10,12 @@ library(dplyr)
 library(ggplot2)
 library(reshape2)
 library(readr) #combine .csv files
+library(lubridate)
 ```
 Reading in daa from avtech system, which measured the Durafets in the Header and Experiment tanks (as well as a lot of other irrelevant sensors). Filtering out only the columns for Header and Control Durafets and changing their names. 
 NOTE: I think Control and Treatment were switched in the actual experiment relative to their labeling in the avtech system, so I have switched them here. Will double check.
 ```{r}
-avtech <- read.csv("Data/WaterChem/Scallop-OA-Project-master/Data/avtech/avtech_20160926-20161125.csv", header = TRUE)
+avtech <- read.csv("../Data/WaterChem/Scallop-OA-Project-master/Data/avtech/avtech_20160926-20161125.csv", header = TRUE)
 colnames(avtech)[grep("Temp",colnames(avtech), value = FALSE)]
 avtech <- select(avtech, Date...Time, pH.Header.Cont....Custom.Value, pH.Header.Treat...Custom.Value, pH.Exp.Cont....Custom.Value, pH.Exp.Treat....Custom.Value)
 colnames(avtech) <- c("Date","pH.Header.Treatment","pH.Header.Control","pH.Exp.Treatment","pH.Exp.Control")
@@ -22,13 +23,12 @@ colnames(avtech) <- c("Date","pH.Header.Treatment","pH.Header.Control","pH.Exp.T
 Graphing avtech data, both raw and filtering out pH < 6.5:
 ```{r}
 melted <- melt(avtech, id="Date")
+melted$Date <- mdy_hms(melted$Date)
 melted.filt <- filter(melted, value > 6.5)
-melted.filt$Date <- strptime(melted.filt$Date,format = "%m/%d/%y - %H:%M:%S")
-melted$Date <- strptime(melted$Date,format = "%m/%d/%y - %H:%M:%S")
-ggplot(melted.filt,aes(x=Date, y=value, colour = variable)) + geom_line() + xlab("Date") +ylab("Durafet pH") + ggtitle("pH values, filtered pH < 6.5")
+ggplot(melted.filt,aes(x=Date, y=value, colour = variable)) + geom_line() + xlab("Date") +ylab("Durafet pH") + ggtitle("pH values, filtered pH < 6.5") +scale_x_datetime(date_breaks = "1 week",date_labels = "%m-%d")
 ```
 ```{r}
-ggplot(melted,aes(x=Date, y=value, colour = variable)) + geom_line() + xlab("Date") +ylab("Durafet pH") + ggtitle("pH values, unfiltered")
+ggplot(melted,aes(x=Date, y=value, colour = variable)) + geom_line() + xlab("Date") +ylab("Durafet pH") + ggtitle("pH values, unfiltered") +scale_x_datetime(date_breaks = "1 week",date_labels = "%m-%d",)
 ```
 Merge multiple .csv files into 1 master file and save
 ```{r}
@@ -39,7 +39,6 @@ SW.ag <- list.files(path = csv.path, full.names = TRUE) %>%
 SW.ag
 write.csv(SW.ag,file = "/home/ksilliman/Projects/OA_Ostrea/Data/WaterChem/Scallop-OA-Project-master/Data/SW.chem.ag.csv")
 ```
-
 
 The following code is adapted from [Hollie Putnam's OA Geoduck experiment](https://github.com/hputnam/project_larval_geoduck_OA):
 ```{r}
@@ -75,7 +74,7 @@ for(i in 1:length(file.names)) { # for every file in list start at the first and
 }
 
 # read in temperature and salinity
-SW.chem <- read.csv("Data/WaterChem/Scallop-OA-Project-master/Data/SW.chem.ag.csv", header=TRUE, sep=",", na.strings="NA") #load data with a header, separated by commas, with NA as NA
+SW.chem <- read.csv("../Data/WaterChem/Scallop-OA-Project-master/Data/SW.chem.ag.csv", header=TRUE, sep=",", na.strings="NA") #load data with a header, separated by commas, with NA as NA
 
 #merge with Seawater chemistry file
 SW.chem <- merge(pH.cals, SW.chem, by="Calib.Date")
@@ -93,7 +92,7 @@ colnames(SW.chem)
 Graphing Total pH:
 ```{r}
 SW.chem$Measure.Date <- ymd(SW.chem$Measure.Date)
-ggplot(SW.chem,aes(x=Measure.Date, y=pH.Total, colour = Tank)) + geom_point() + xlab("Date") +ylab("Total pH (Benchtop)") + ggtitle("Total pH values")
+ggplot(SW.chem,aes(x=Measure.Date, y=pH.Total, colour = Tank)) + geom_point() + xlab("Date") +ylab("Total pH (Benchtop)") + ggtitle("Total pH values") +scale_x_date(date_breaks = "1 week",date_labels = "%m-%d")
 ```
 10-31-16 has unusual values:
 ```{r}
@@ -101,7 +100,8 @@ SW.chem$Measure.Date[which(SW.chem$pH.Total > 8)]
 ```
 
 ```{r}
-ggplot(SW.chem,aes(x=Measure.Date, y=Temperature, colour = Tank)) + geom_point() + xlab("Date") +ylab("Temperature (C)") + ggtitle("Temperature values")
+ggplot(SW.chem,aes(x=Measure.Date, y=Temperature, colour = Tank)) + geom_point() + xlab("Date") +ylab("Temperature (C)") + ggtitle("Temperature values") +scale_x_date(date_breaks = "1 week",date_labels = "%m-%d")
+
 ```
 ```{r}
 ggplot(SW.chem,aes(x=Measure.Date, y=Salinity, colour = Tank)) + geom_point() + xlab("Date") +ylab("Salinity (ppt)") + ggtitle("Salinity")
